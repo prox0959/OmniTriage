@@ -42,6 +42,18 @@ During live incident response, time and stealth are everything. Traditional tria
 * **🔒 Persistence Audit (MITRE T1547.001):**
   * Audits `HKCU` and `HKLM` `Run` and `RunOnce` autostart keys.
   * Inspects User and System `Startup` directories.
+* **🌐 DNS Cache & C2 IoC Hunting:**
+  * Pulls live resolved DNS entries (`ipconfig /displaydns`) to detect active Command & Control infrastructure (e.g. `ngrok`, `duckdns`, `pastebin`, `discord webhooks`).
+* **📡 Remote Code Execution & Lateral Movement (MITRE T1021 / T1059):**
+  * Audits RDP listener status (Port, `fDenyTSConnections`) and Terminal Services logon sessions (Event ID 21/24/25).
+  * PowerShell ScriptBlock Logging (Event 4104) analysis for offensive payloads (`IEX`, `DownloadString`, `mimikatz`, `encodedcommand`).
+* **🏛️ ShimCache (AppCompatCache) Mining:**
+  * Parses binary Application Compatibility Cache (`10ts` structure) directly from Windows Registry. Uncovers historical paths of deleted malware executables!
+* **📅 Scheduled Tasks Persistence (MITRE T1053.005):**
+  * Audits Windows Scheduled Tasks (`schtasks`) to detect suspicious automated triggers running out of `%TEMP%`, `%APPDATA%`, or `Users\Public`.
+* **🚨 Windows Event Logs & Anti-Forensics (Event 7045 / 1102 / 104):**
+  * Uncovers recently installed Windows services and kernel drivers.
+  * Detects security audit log purges and anti-forensic tampering.
 * **📊 Standalone Interactive Reports:**
   * Interactive dark-themed HTML report (`Triage_<HOST>_<TIMESTAMP>.html`) with zero CDN dependencies (completely offline capable).
   * Normalized structured JSON (`Triage_<HOST>_<TIMESTAMP>.json`) ready for SIEM ingestion (Splunk, Elastic, Sentinel).
@@ -52,12 +64,18 @@ During live incident response, time and stealth are everything. Traditional tria
 
 | MITRE ATT&CK ID | Tactic | Technique | OmniTriage Collector |
 |---|---|---|---|
-| **T1059.001** | Execution | PowerShell Command History | `collectors/execution.py` (`PSReadLine`) |
-| **T1204** | Execution | User Execution (RunMRU / UserAssist) | `collectors/execution.py` (`RunMRU`, `UserAssist`) |
+| **T1059.001** | Execution | PowerShell Command History & ScriptBlocks | `execution.py`, `remote_exec.py` |
+| **T1021** | Lateral Movement | Remote Services (RDP, WinRM) | `collectors/remote_exec.py` |
+| **T1071.004** | Command & Control | DNS Domain Resolutions | `collectors/dns_cache.py` |
+| **T1204** | Execution | User Execution (RunMRU / UserAssist / ShimCache) | `execution.py`, `shimcache.py` |
+| **T1053.005** | Persistence | Scheduled Task Persistence | `collectors/tasks.py` |
+| **T1070** | Anti-Forensics | Indicator Removal on Host (Log Clearing) | `collectors/event_logs.py` |
+| **T1543.003** | Persistence | Windows Service Creation (Event 7045) | `collectors/event_logs.py` |
 | **T1036** | Defense Evasion | Masquerading in `%TEMP%` / `%APPDATA%` | `collectors/filesystem.py` |
 | **T1547.001** | Persistence | Registry Run Keys / Startup Folder | `collectors/persistence.py` |
 | **T1082** | Discovery | System Information & InstallDate | `collectors/sysinfo.py` |
 | **T1049** | Discovery | System Network Connections & Wi-Fi | `collectors/network.py` |
+| **T1005** | Collection | Browser Data & Download Logs | `collectors/browser.py` |
 | **T1005** | Collection | Browser Data & Download Logs | `collectors/browser.py` |
 
 ---

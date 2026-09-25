@@ -31,7 +31,12 @@ from collectors import (
     collect_browser_history,
     collect_network_artifacts,
     collect_filesystem_artifacts,
-    collect_persistence_artifacts
+    collect_persistence_artifacts,
+    collect_dns_cache,
+    collect_event_logs,
+    collect_remote_execution_artifacts,
+    parse_shimcache,
+    collect_scheduled_tasks
 )
 from reporters import generate_json_report, generate_html_report
 
@@ -147,12 +152,44 @@ def main():
         log("Skipping filesystem staging scan (--no-fs)", "WARN")
         data["filesystem_artifacts"] = {}
 
-    # Step 6: Persistence
-    log("Auditing autostart persistence mechanisms (Run/RunOnce, Startup)...", "INFO")
+    # Step 6: Persistence & Scheduled Tasks
+    log("Auditing autostart persistence mechanisms (Run/RunOnce, Startup, Tasks)...", "INFO")
     data["persistence_artifacts"] = collect_persistence_artifacts()
     pers_art = data["persistence_artifacts"]
+    data["scheduled_tasks"] = collect_scheduled_tasks()
+    task_art = data["scheduled_tasks"]
     log(f"Registry Run/RunOnce keys: {pers_art.get('registry_run_keys_count', 0)} entries", "SUCCESS")
     log(f"Startup folder items: {pers_art.get('startup_folder_items_count', 0)} files", "SUCCESS")
+    log(f"Scheduled Tasks: {task_art.get('total_tasks_discovered', 0)} total ({task_art.get('suspicious_tasks_count', 0)} suspicious flagged)", "SUCCESS")
+
+    # Step 7: DNS Cache & C2 Indicators
+    log("Harvesting live DNS cache & hunting C2 communication traces...", "INFO")
+    data["dns_cache_artifacts"] = collect_dns_cache()
+    dns_art = data["dns_cache_artifacts"]
+    log(f"DNS Cache: {dns_art.get('total_records', 0)} domains resolved ({dns_art.get('flagged_count', 0)} suspicious C2 domains)", "SUCCESS")
+
+    # Step 8: Critical Event Logs (Services & Anti-Forensics)
+    log("Harvesting Windows Event Logs (Service Installations & Log Purges)...", "INFO")
+    data["event_log_artifacts"] = collect_event_logs()
+    evt_art = data["event_log_artifacts"]
+    log(f"Recent Installed Services (Event 7045): {evt_art.get('recent_installed_services_count', 0)} ({evt_art.get('suspicious_services_flagged', 0)} flagged in staging)", "SUCCESS")
+    if evt_art.get("anti_forensics_cleared_logs", {}).get("audit_logs_cleared"):
+        log("CRITICAL ALERT: Windows Security/System event logs were purged (Event 104/1102)!", "ALERT")
+
+    # Step 9: Remote Code Execution & Lateral Movement (RDP, WinRM, ScriptBlock)
+    log("Auditing Remote Code Execution (RDP, WinRM, PowerShell ScriptBlock)...", "INFO")
+    data["remote_execution_artifacts"] = collect_remote_execution_artifacts()
+    rce_art = data["remote_execution_artifacts"]
+    rce_srv = rce_art.get("remote_services_status", {})
+    log(f"RDP Listener: {'ENABLED (Port ' + str(rce_srv.get('rdp_port')) + ')' if rce_srv.get('rdp_enabled') else 'DISABLED'}", "INFO")
+    log(f"RDP Logon Sessions: {len(rce_art.get('rdp_session_history', []))} recent events", "SUCCESS")
+    log(f"PowerShell ScriptBlock RCE Detections: {rce_art.get('scriptblock_rce_detections_count', 0)} flagged blocks", "SUCCESS")
+
+    # Step 10: ShimCache (AppCompatCache) Mining
+    log("Mining Windows ShimCache (AppCompatCache) for historical binary executions...", "INFO")
+    data["shimcache_artifacts"] = parse_shimcache()
+    shim_art = data["shimcache_artifacts"]
+    log(f"ShimCache: {shim_art.get('total_entries', 0)} binary execution records ({shim_art.get('suspicious_count', 0)} staging/temp binaries)", "SUCCESS")
 
     # Generate Reports
     log("Compiling forensic reports...", "INFO")

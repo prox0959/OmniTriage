@@ -463,6 +463,104 @@ def generate_html_report(data: dict, output_path: str) -> dict:
         </div>
     </div>
 
+    <!-- SECTION: REMOTE CODE EXECUTION & LATERAL MOVEMENT -->
+    <div class="section-box">
+        <div class="section-header">
+            <span>Remote Execution (RDP, WinRM & ScriptBlock Detections)</span>
+            <span class="badge badge-red">MITRE T1021 / T1059</span>
+        </div>
+        <div class="section-content">
+            <div style="margin-bottom: 12px; font-size: 13px;">
+                <strong>RDP Service:</strong> <span class="badge {'badge-green' if data.get('remote_execution_artifacts', {}).get('remote_services_status', {}).get('rdp_enabled') else 'badge-gray'}">{'ENABLED' if data.get('remote_execution_artifacts', {}).get('remote_services_status', {}).get('rdp_enabled') else 'DISABLED'} (Port {data.get('remote_execution_artifacts', {}).get('remote_services_status', {}).get('rdp_port', 3389)})</span>
+                &nbsp;&nbsp;
+                <strong>PowerShell RCE Flags:</strong> <span class="badge {'badge-red' if len(data.get('remote_execution_artifacts', {}).get('scriptblock_rce_detections', [])) > 0 else 'badge-green'}">{len(data.get('remote_execution_artifacts', {}).get('scriptblock_rce_detections', []))} flagged</span>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Timestamp</th><th>Action / Type</th><th>User</th><th>Source IP</th></tr>
+                </thead>
+                <tbody>
+                    {''.join([f"<tr><td class='mono'>{escape(s.get('timestamp'))}</td><td><span class='badge badge-blue'>{escape(s.get('action'))}</span></td><td><strong>{escape(s.get('target_user'))}</strong></td><td class='mono text-green'>{escape(s.get('source_ip'))}</td></tr>" for s in data.get('remote_execution_artifacts', {}).get('rdp_session_history', [])]) or '<tr><td colspan="4" class="text-muted">No remote session activity detected.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION: CRITICAL EVENT LOGS & SUSPICIOUS SERVICES -->
+    <div class="section-box">
+        <div class="section-header">
+            <span>Recent Installed Services & System Drivers (Event 7045)</span>
+            <span class="badge badge-yellow">Persistence & Driver Staging</span>
+        </div>
+        <div class="section-content">
+            <table>
+                <thead>
+                    <tr><th>Date</th><th>Service Name</th><th>Image / Binary Path</th></tr>
+                </thead>
+                <tbody>
+                    {''.join([f"<tr><td class='mono text-muted'>{escape(s.get('date'))}</td><td><strong>{escape(s.get('service_name'))}</strong></td><td class='mono path-cell text-{'red' if any(b in s.get('image_path','').lower() for b in ['temp', 'appdata']) else 'primary'}' title='{escape(s.get('image_path'))}'>{escape(s.get('image_path'))}</td></tr>" for s in data.get('event_log_artifacts', {}).get('recent_installed_services', [])[:10]]) or '<tr><td colspan="3" class="text-muted">No recently installed services logged.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION: SHIMCACHE EXECUTION TIMELINE -->
+    <div class="section-box">
+        <div class="section-header">
+            <span>ShimCache (AppCompatCache) Historical Executions</span>
+            <span class="badge badge-purple">Binary Execution Evidence</span>
+        </div>
+        <div class="section-content">
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+                Total Binary Paths Cached: <strong>{data.get('shimcache_artifacts', {}).get('total_entries', 0)}</strong> | Staging/Temp Executions: <strong class="text-red">{data.get('shimcache_artifacts', {}).get('suspicious_count', 0)}</strong>
+            </p>
+            <table>
+                <thead>
+                    <tr><th>Execution Path (Deleted or Active Executables)</th></tr>
+                </thead>
+                <tbody>
+                    {''.join([f"<tr><td class='mono path-cell {'text-red' if any(b in p.lower() for b in ['temp', 'appdata', 'public']) else ''}' title='{escape(p)}'>{escape(p)}</td></tr>" for p in data.get('shimcache_artifacts', {}).get('suspicious_staging_entries', [])[:15]]) or '<tr><td class="text-muted">No suspicious staging executions detected in ShimCache.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION: DNS CACHE & C2 IOCS -->
+    <div class="section-box">
+        <div class="section-header">
+            <span>DNS Cache & C2 Indicators (ipconfig /displaydns)</span>
+            <span class="badge badge-green">Network Indicators of Compromise</span>
+        </div>
+        <div class="section-content">
+            <table>
+                <thead>
+                    <tr><th>Resolved Domain</th><th>Record Type</th></tr>
+                </thead>
+                <tbody>
+                    {''.join([f"<tr><td class='mono {'text-red' if any(bad in d.get('domain','').lower() for bad in ['ngrok', 'duckdns', 'discordapp', 'temp']) else ''}'><strong>{escape(d.get('domain'))}</strong></td><td><span class='badge badge-gray'>{escape(d.get('type'))}</span></td></tr>" for d in data.get('dns_cache_artifacts', {}).get('recent_domains', [])[:20]]) or '<tr><td colspan="2" class="text-muted">No active DNS cache entries found.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION: SCHEDULED TASKS -->
+    <div class="section-box">
+        <div class="section-header">
+            <span>Scheduled Tasks Persistence (schtasks)</span>
+            <span class="badge badge-yellow">MITRE T1053.005</span>
+        </div>
+        <div class="section-content">
+            <table>
+                <thead>
+                    <tr><th>Task Name</th><th>Next Run Time</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {''.join([f"<tr><td class='mono'><strong>{escape(t.get('task_name'))}</strong></td><td class='mono text-muted'>{escape(t.get('next_run_time'))}</td><td><span class='badge badge-blue'>{escape(t.get('status'))}</span></td></tr>" for t in data.get('scheduled_tasks', {}).get('sample_tasks', [])[:15]]) or '<tr><td colspan="3" class="text-muted">No scheduled tasks logged.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="footer">
         Generated by <strong>OmniTriage v1.0.0</strong> | Authored by Çınar (prox0959) | Zero-Dependency Forensic Framework
     </div>
