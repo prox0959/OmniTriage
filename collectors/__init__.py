@@ -5,6 +5,7 @@ Zero-dependency forensic acquisition engine.
 """
 
 from .sysinfo import collect_system_info
+from .processes import collect_running_processes
 from .execution import collect_execution_artifacts
 from .browser import collect_browser_history
 from .network import collect_network_artifacts
@@ -18,6 +19,7 @@ from .tasks import collect_scheduled_tasks
 
 __all__ = [
     "collect_system_info",
+    "collect_running_processes",
     "collect_execution_artifacts",
     "collect_browser_history",
     "collect_network_artifacts",

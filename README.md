@@ -21,9 +21,15 @@ During live incident response, time and stealth are everything. Traditional tria
 
 ---
 
-## 🚀 Key Features
+## 🚀 Key Features (v1.1.0 — RFC 3227 Compliant)
 
-* **⚡ Sub-Second Live Execution:** Completes a comprehensive full-disk forensic triage in ~0.25 to 1.5 seconds.
+* **⚖️ RFC 3227 Order of Volatility Pipeline:** Strictly sequences acquisition from most volatile to least volatile:
+  1. **Tier 1 (Ephemeral/Volatile):** Active TCP sockets, live DNS resolver cache, and running process memory snapshots.
+  2. **Tier 2 (Semi-Volatile/Registry):** ShimCache, UserAssist, RunMRU, Persistence keys, Scheduled Tasks, and Event Logs.
+  3. **Tier 3 (Persistent Disk):** Staging directory files (`%TEMP%`, `%APPDATA%`) and locked Chromium SQLite databases.
+* **🔬 Native Win32 Live Process Snapshot (`processes.py`):** Enumerates all running processes (PID, PPID, parent name, thread count, full image path) in <5ms via `CreateToolhelp32Snapshot` & `QueryFullProcessImageNameW` without spawning child processes (`tasklist.exe`), preserving volatile memory state and flagging active LOLBins or anomalous parent-child spawns (e.g., Office spawning PowerShell).
+* **🔐 Chain of Custody & SHA-256 Hashing:** Automatically generates a cryptographic `_hashes.sha256` manifest and a dedicated timestamped `omnitriage_audit.log` file alongside every report for forensic integrity verification.
+* **⚡ Sub-Second Live Execution:** Completes a comprehensive forensic triage in ~0.8 seconds.
 * **🛡️ Zero 3rd-Party Dependencies:** Runs out-of-the-box on any Windows machine with Python installed. Does not write temp utilities or drop executables to disk.
 * **🔓 SQLite Lock Bypass (Shadow Buffer Querying):** Extracts live browsing history and download logs from Chrome, Edge, and Brave even while the suspect or user has the browser actively open.
 * **🧠 Program Execution Evidence:**
