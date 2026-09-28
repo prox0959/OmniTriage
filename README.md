@@ -1,4 +1,10 @@
-> ⚡ **NEW COMMERCIAL RELEASE:** Check out **[ProxSuite PRO (Apex v2.5 Enterprise)](https://prox0959.github.io/ProxSuite-PRO/)** — Our **25-in-1 Native x64 Windows EDR, Live Memory Forensics (Module Stomping / Ghosting / Syscalls), Anti-Stealer & SIEM Suite** (~95 KB EXE, 100% Defender Clean). **[24h Free Trial / .99 License /  Full C# Source Code (Crypto Only)](https://prox0959.github.io/ProxSuite-PRO/#instant-checkout)**
+## ⚡ Looking for the Full 25-in-1 Enterprise Edition? -> [ProxSuite PRO v2.5](https://prox0959.github.io/ProxSuite-PRO/)
+
+This repository is a standalone module from **[ProxSuite PRO (Apex Edition v2.5 Enterprise)](https://github.com/prox0959/ProxSuite-PRO)** — our **25-in-1 Native x64 Windows EDR, Live Memory Forensics (Module Stomping, Process Ghosting, NTDLL Syscall Unhooking), LSASS SSP Shield, Cobalt Strike Named Pipe Scanner & SIEM Command Center** (~95 KB zero-dependency .exe, 100% Windows Defender clean).
+
+- ⚡ **Direct .EXE Download (v2.5):** **[Download ProxSuitePRO.exe](https://github.com/prox0959/ProxSuite-PRO/releases/latest/download/ProxSuitePRO.exe)**
+- 🌐 **Interactive Web Simulator & Portal:** **[https://prox0959.github.io/ProxSuite-PRO/](https://prox0959.github.io/ProxSuite-PRO/)**
+- 🪙 **Licensing & Full Source Code (Crypto Only):** **24h Free Trial ()** | **30-Day (.99)** | **Permanent (.99)** | 💎 **Full 3,100+ Line C# Source Code & White-Label Rights ()** -> **[Instant Order Portal](https://prox0959.github.io/ProxSuite-PRO/#instant-checkout)**
 
 ---
 
