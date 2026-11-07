@@ -89,47 +89,57 @@ def get_wifi_and_network_profiles() -> list:
 
     return profiles
 
-def get_usbstor_history() -> list:
+def get_usbstor_history() -> dict:
     """
-    TR: USBSTOR anahtarından bu bilgisayara daha önce takılmış tüm USB belleklerin marka, model ve seri numaralarını çıkarır.
-    Extracts historical USB storage device connection artifacts (Vendor, Product ID, Serial number).
+    TR: USBSTOR, WPDBUSENUM ve USB anahtarlarından bu bilgisayara daha önce takılmış USB bellek ve donanımların
+    marka, model ve seri numaralarını çıkarır.
+    Extracts historical USB storage and peripheral connection artifacts (Vendor, Product ID, Serial number).
     """
     usb_devices = []
-    base_usbstor = r"SYSTEM\CurrentControlSet\Enum\USBSTOR"
-    try:
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, base_usbstor) as root_key:
-            num_dev_keys = winreg.QueryInfoKey(root_key)[0]
-            for i in range(num_dev_keys):
-                dev_id = winreg.EnumKey(root_key, i)
-                dev_path = f"{base_usbstor}\\{dev_id}"
-                try:
-                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, dev_path) as dev_key:
-                        num_instances = winreg.QueryInfoKey(dev_key)[0]
-                        for j in range(num_instances):
-                            serial = winreg.EnumKey(dev_key, j)
-                            instance_path = f"{dev_path}\\{serial}"
-                            try:
-                                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, instance_path) as inst_key:
-                                    def qv(name):
-                                        try:
-                                            v, _ = winreg.QueryValueEx(inst_key, name)
-                                            return v
-                                        except Exception:
-                                            return None
-                                    friendly_name = qv("FriendlyName")
-                                    mfg = qv("Mfg")
-                                    usb_devices.append({
-                                        "device_id": dev_id,
-                                        "serial_number": serial,
-                                        "friendly_name": friendly_name or dev_id,
-                                        "manufacturer": mfg or "Generic"
-                                    })
-                            except Exception:
-                                continue
-                except Exception:
-                    continue
-    except Exception:
-        pass
+    reg_roots = [
+        r"SYSTEM\CurrentControlSet\Enum\USBSTOR",
+        r"SYSTEM\CurrentControlSet\Enum\SWD\WPDBUSENUM",
+        r"SYSTEM\CurrentControlSet\Enum\USB"
+    ]
+    for base_path in reg_roots:
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, base_path) as root_key:
+                num_dev_keys = winreg.QueryInfoKey(root_key)[0]
+                for i in range(num_dev_keys):
+                    dev_id = winreg.EnumKey(root_key, i)
+                    if "ROOT_HUB" in dev_id.upper():
+                        continue
+                    dev_path = f"{base_path}\\{dev_id}"
+                    try:
+                        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, dev_path) as dev_key:
+                            num_instances = winreg.QueryInfoKey(dev_key)[0]
+                            for j in range(num_instances):
+                                serial = winreg.EnumKey(dev_key, j)
+                                instance_path = f"{dev_path}\\{serial}"
+                                try:
+                                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, instance_path) as inst_key:
+                                        def qv(name):
+                                            try:
+                                                v, _ = winreg.QueryValueEx(inst_key, name)
+                                                if isinstance(v, str) and ";" in v:
+                                                    return v.split(";")[-1].strip()
+                                                return v
+                                            except Exception:
+                                                return None
+                                        friendly_name = qv("FriendlyName") or qv("DeviceDesc")
+                                        mfg = qv("Mfg")
+                                        usb_devices.append({
+                                            "device_id": dev_id,
+                                            "serial_number": serial,
+                                            "friendly_name": friendly_name or dev_id,
+                                            "manufacturer": mfg or "Generic"
+                                        })
+                                except Exception:
+                                    continue
+                    except Exception:
+                        continue
+        except Exception:
+            pass
 
     # Mounted Devices volumes
     mounted = []

@@ -64,8 +64,28 @@ def collect_dns_cache() -> dict:
         if current_record.get("domain"):
             records.append(current_record)
 
-    except Exception as e:
-        return {"total_records": 0, "records": [], "flagged_c2_domains": [], "error": str(e)}
+    except Exception:
+        pass
+
+    # Fallback / Supplement: Inspect Windows hosts file for custom or hijacked DNS mappings
+    try:
+        import os
+        hosts_path = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "drivers", "etc", "hosts")
+        if os.path.exists(hosts_path):
+            with open(hosts_path, "r", encoding="utf-8", errors="ignore") as hf:
+                for line in hf:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        dom = parts[1].strip()
+                        records.append({"domain": dom, "type": f"HOSTS ({parts[0]})", "ttl": "STATIC"})
+                        matched = [kw for kw in SUSPICIOUS_DOMAIN_KEYWORDS if kw in dom.lower()]
+                        if matched:
+                            flagged.append({"domain": dom, "matched_keywords": matched, "type": "HOSTS"})
+    except Exception:
+        pass
 
     # Deduplicate domains preserving order
     seen = set()
